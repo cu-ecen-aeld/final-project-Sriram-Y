@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../include/audio_processing.h
+
+/home/dev/final-project/final-project-Sriram-Y/src/audio_processing.c
+audio_processing.h
+/home/dev/final-project/final-project-Sriram-Y/src/audio_processing.h
+alsa/asoundlib.h
+-
+stdio.h
+-
+stdlib.h
+-
+
