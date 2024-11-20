@@ -1,5 +1,3 @@
-CC ?= $(CROSS_COMPILE)gcc
-
 CFLAGS = -Wall -I./include
 LDFLAGS = -lasound
 
