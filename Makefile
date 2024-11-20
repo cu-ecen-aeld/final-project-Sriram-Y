@@ -1,27 +1,29 @@
+# Get CROSS_COMPILE value from user
 CROSS_COMPILE ?= 
+
+# Compiler and flags
 CC = $(CROSS_COMPILE)gcc
-CFLAGS = -Wall -I./include
-LDFLAGS = -lasound
+CFLAGS = -g -Wall -Werror
 
-SRC_DIR = src
-OBJ_DIR = build
+# Target binary
+TARGET = aesdsocket
 
-SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/audio_processing.c
-OBJECTS = $(SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
-EXECUTABLE = audio_eq_driver
+# Source files and object files
+SRC = $(TARGET).c
+OBJ = $(SRC:.c=.o)
 
-all: $(EXECUTABLE)
+# Default
+all: $(TARGET)
+default: $(TARGET)
 
-$(EXECUTABLE): $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) -o $@ $(LDFLAGS)
+# Build executable from object files
+$(TARGET): $(TARGET).c
+	$(CC) $(CFLAGS) -pthread -lasound -o $@ $^
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
-
+# Clean
 clean:
-	rm -rf $(OBJ_DIR) $(EXECUTABLE)
+	rm -f *.o $(TARGET) *.elf *.map
 
-.PHONY: all clean
+# Phony targets
+.PHONY: 
+	all clean
