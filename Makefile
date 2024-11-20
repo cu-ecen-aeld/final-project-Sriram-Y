@@ -6,7 +6,7 @@ CC = $(CROSS_COMPILE)gcc
 CFLAGS = -g -Wall -Werror
 
 # Target binary
-TARGET = aesdsocket
+TARGET = audioeqdriver
 
 # Source files and object files
 SRC = $(TARGET).c
