@@ -1,5 +1,5 @@
-CROSS_COMPILE ?=
-CC = $(CROSS_COMPILE)gcc
+CC ?= $(CROSS_COMPILE)gcc
+
 CFLAGS = -Wall -I./include
 LDFLAGS = -lasound
 
@@ -13,7 +13,7 @@ EXECUTABLE = audio_eq_driver
 all: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(OBJECTS) -o $@ $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -22,6 +22,6 @@ $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
 clean:
-	rm -f $(OBJ_DIR)/* $(EXECUTABLE)
+	rm -rf $(OBJ_DIR) $(EXECUTABLE)
 
 .PHONY: all clean
