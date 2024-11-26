@@ -9,7 +9,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # Add the source files
 add_executable(audioeqdriver
-    src/main.c
+    src/audioeqdriver.c
     src/audio_processing.c
 )
 
