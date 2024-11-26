@@ -1,5 +1,8 @@
+# Get CROSS_COMPILE value from user
+CROSS_COMPILE ?= 
+
 # Compiler and flags
-CC = arm-none-linux-gnueabihf-gcc
+CC = $(CROSS_COMPILE)gcc
 CFLAGS = -g -Wall -Werror
 
 # Target binary
