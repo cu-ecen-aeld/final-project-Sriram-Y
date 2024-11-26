@@ -22,7 +22,7 @@ $(TARGET): $(TARGET).c
 
 # Clean
 clean:
-	rm -f *.o $(TARGET) *.elf *.map
+	rm -rf *.o $(TARGET) *.elf *.map ./build && mkdir build
 
 # Phony targets
 .PHONY: 
