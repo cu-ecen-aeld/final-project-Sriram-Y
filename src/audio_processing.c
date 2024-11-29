@@ -1,19 +1,82 @@
 #include "audio_processing.h"
-#include <alsa/asoundlib.h>
-#include <stdio.h>
-#include <stdlib.h>
 
-#define SAMPLE_RATE 44100
-#define CHANNELS 2
-#define BUFFER_SIZE 1024
+short band_1[BUFFER_SIZE];
+short band_2[BUFFER_SIZE];
+short band_3[BUFFER_SIZE];
+short band_4[BUFFER_SIZE];
+short band_5[BUFFER_SIZE];
+short band_6[BUFFER_SIZE];
 
-void print_waveform(short *buffer, int frames)
+void modify_band(int band_number)
 {
-    for (int i = 0; i < frames; i++)
+    // TODO: Modify each band here and store the modified band back in its respective buffer
+}
+
+// Function to process FFT and reconstruct audio
+void process_audio_bands(short *buffer, int frames)
+{
+    int N = frames * CHANNELS; // Total number of samples
+    double *in = fftw_malloc(sizeof(double) * N);
+    fftw_complex *out = fftw_malloc(sizeof(fftw_complex) * (N / 2 + 1));
+    fftw_plan plan_forward = fftw_plan_dft_r2c_1d(N, in, out, FFTW_ESTIMATE);
+    fftw_plan plan_inverse = fftw_plan_dft_c2r_1d(N, out, in, FFTW_ESTIMATE);
+
+    // Copy audio data into the FFT input buffer
+    for (int i = 0; i < N; i++)
     {
-        printf("%d ", buffer[i]);
+        in[i] = (double)buffer[i];
     }
-    printf("\n");
+
+    // Perform FFT
+    fftw_execute(plan_forward);
+
+    // Frequency band definitions
+    int band_limits[] = {BAND_1_MAX, BAND_2_MAX, BAND_3_MAX, BAND_4_MAX, BAND_5_MAX, BAND_6_MAX};
+    int band_count = 6;
+    double bin_size = (double)SAMPLE_RATE / N;
+
+    // Process each band and store the result in the global arrays
+    for (int band = 0; band < band_count; band++)
+    {
+        int lower_bin = (band == 0) ? 0 : (int)(band_limits[band - 1] / bin_size);
+        int upper_bin = (int)(band_limits[band] / bin_size);
+
+        // Zero out frequencies outside this band
+        for (int i = 0; i < N / 2 + 1; i++)
+        {
+            if (i < lower_bin || i > upper_bin)
+            {
+                out[i][0] = 0.0;
+                out[i][1] = 0.0;
+            }
+        }
+
+        fftw_execute(plan_inverse);
+
+        // Normalize and store the result in the corresponding global array
+        short *band_buffer = NULL;
+        switch (band)
+        {
+            case 0: band_buffer = band_1; break;
+            case 1: band_buffer = band_2; break;
+            case 2: band_buffer = band_3; break;
+            case 3: band_buffer = band_4; break;
+            case 4: band_buffer = band_5; break;
+            case 5: band_buffer = band_6; break;
+        }
+
+        // Store the processed audio band into its corresponding global array
+        for (int i = 0; i < frames; i++)
+        {
+            band_buffer[i] = (short)(in[i] / N); // Normalize and store
+        }
+    }
+
+    // Cleanup FFTW resources
+    fftw_destroy_plan(plan_forward);
+    fftw_destroy_plan(plan_inverse);
+    fftw_free(in);
+    fftw_free(out);
 }
 
 void process_audio()
@@ -73,11 +136,11 @@ void process_audio()
         exit(1);
     }
 
-    // allocate the buffer audio data
+    // Allocate the buffer for audio data
     snd_pcm_hw_params_get_period_size(params, &frames, 0);
     buffer = (short *)malloc(frames * sizeof(short) * CHANNELS);
 
-    // keep capturing the audio
+    // Keep capturing the audio
     while (1)
     {
         err = snd_pcm_readi(handle, buffer, frames);
@@ -95,7 +158,9 @@ void process_audio()
             fprintf(stderr, "Error: short read, read %d frames instead of %d\n", err, frames);
         }
 
-        print_waveform(buffer, frames);
+        process_audio_bands(buffer, frames);
+
+        // TODO: Here is where you will call the modify_bands function
     }
 
     // Clean up

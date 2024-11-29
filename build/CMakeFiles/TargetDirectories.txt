@@ -1,3 +1,0 @@
-/home/dev/final-project/final-project-Sriram-Y/build/CMakeFiles/edit_cache.dir
-/home/dev/final-project/final-project-Sriram-Y/build/CMakeFiles/rebuild_cache.dir
-/home/dev/final-project/final-project-Sriram-Y/build/CMakeFiles/audioeqdriver.dir
