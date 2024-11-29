@@ -18,4 +18,4 @@ set_target_properties(audioeqdriver PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_
 
 # Link the ALSA library
 find_library(ALSA_LIB asound REQUIRED)
-target_link_libraries(audioeqdriver ${ALSA_LIB})
+target_link_libraries(audioeqdriver ${ALSA_LIB} m mp3lame)

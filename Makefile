@@ -18,7 +18,7 @@ default: $(TARGET)
 
 # Build executable from object files
 $(TARGET): $(TARGET).c
-	$(CC) $(CFLAGS) -pthread -lasound -o $@ $^
+	$(CC) $(CFLAGS) -pthread -lasound -lmp3lame -o $@ $^
 
 # Clean
 clean:
