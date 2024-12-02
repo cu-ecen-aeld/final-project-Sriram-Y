@@ -10,6 +10,62 @@ short band_6[BUFFER_SIZE];
 void modify_band(int band_number)
 {
     // TODO: Modify each band here and store the modified band back in its respective buffer
+    short* band_buffer;
+    float gain = 1.0;  
+    float distortion = 0.0;  // Distort amount 
+    
+    // Select the appropriate buffer based on band number
+    switch (band_number) {
+        case 0: band_buffer = band_1; break;
+        case 1: band_buffer = band_2; break;
+        case 2: band_buffer = band_3; break;
+        case 3: band_buffer = band_4; break;
+        case 4: band_buffer = band_5; break;
+        case 5: band_buffer = band_6; break;
+        default: band_buffer = band_1; break;  // Invalid band number
+    }
+
+    switch (band_number) {
+        case 0:  // low frequencies
+            gain = 1.2;  // Boost bass by a small amount
+            break;
+        case 1:  // Low to mid frequencies
+            gain = 1.1;
+            break;
+        case 2:  // mid frequencies
+            gain = 1.0;
+            break;
+        case 3:  // mid to upper frequencies frequencies
+            gain = 0.9;  // Reduce slightly
+            distortion = 0.1;  // Add slight distortion
+            break;
+        case 4:  // upper frequencies
+            gain = 0.8;  
+            break;
+        case 5:  // high frequencies
+            gain = 0.7; 
+            break;
+    }
+
+    // Process each sample in the buffer
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+        float sample = band_buffer[i];
+        
+        sample *= gain; //amplify/reduce gain value
+        
+      
+        if (distortion > 0.0) { //apply distortion if needed
+            sample = tanh(sample * (1.0 + distortion * 3.0)) / (1.0 + distortion);
+        }
+        
+        // prevent overflow for the edited samples
+        if (sample > 32767) sample = 32767;
+        if (sample < -32767) sample = -32767;
+        
+        // save back into buffer
+        band_buffer[i] = (short)sample;
+    }
+
 }
 
 // Function to process FFT and reconstruct audio
@@ -161,6 +217,11 @@ void process_audio()
         process_audio_bands(buffer, frames);
 
         // TODO: Here is where you will call the modify_bands function
+        for (int i = 0; i < 6; i++) {
+            modify_band(i);
+        }
+
+        
     }
 
     // Clean up
