@@ -1,4 +1,7 @@
 #include "audio_processing.h"
+#include <math.h>
+
+#define PI 3.14159265358979323846
 
 short band_1[BUFFER_SIZE];
 short band_2[BUFFER_SIZE];
@@ -7,6 +10,112 @@ short band_4[BUFFER_SIZE];
 short band_5[BUFFER_SIZE];
 short band_6[BUFFER_SIZE];
 
+typedef struct
+{
+    double real;
+    double imag;
+} Complex;
+
+void dft(const double *in, Complex *out, int N)
+{
+    for (int k = 0; k < N; k++)
+    {
+        out[k].real = 0;
+        out[k].imag = 0;
+        for (int n = 0; n < N; n++)
+        {
+            double angle = -2 * PI * k * n / N;
+            out[k].real += in[n] * cos(angle);
+            out[k].imag += in[n] * sin(angle);
+        }
+    }
+}
+
+void idft(const Complex *in, double *out, int N)
+{
+    for (int n = 0; n < N; n++)
+    {
+        out[n] = 0;
+        for (int k = 0; k < N; k++)
+        {
+            double angle = 2 * PI * k * n / N;
+            out[n] += in[k].real * cos(angle) - in[k].imag * sin(angle);
+        }
+        out[n] /= N; // Normalize
+    }
+}
+
+void process_audio_bands(short *buffer, int frames)
+{
+    int N = frames * CHANNELS;
+    double *in = malloc(sizeof(double) * N);
+    Complex *out = malloc(sizeof(Complex) * N);
+    double *reconstructed = malloc(sizeof(double) * N);
+
+    for (int i = 0; i < N; i++)
+    {
+        in[i] = (double)buffer[i];
+    }
+
+    dft(in, out, N);
+
+    int band_limits[] = {BAND_1_MAX, BAND_2_MAX, BAND_3_MAX, BAND_4_MAX, BAND_5_MAX, BAND_6_MAX};
+    int band_count = 6;
+    double bin_size = (double)SAMPLE_RATE / N;
+
+    // Process each band
+    for (int band = 0; band < band_count; band++)
+    {
+        int lower_bin = (band == 0) ? 0 : (int)(band_limits[band - 1] / bin_size);
+        int upper_bin = (int)(band_limits[band] / bin_size);
+
+        // Zero out frequencies outside this band
+        for (int i = 0; i < N; i++)
+        {
+            if (i < lower_bin || i > upper_bin)
+            {
+                out[i].real = 0.0;
+                out[i].imag = 0.0;
+            }
+        }
+
+        idft(out, reconstructed, N);
+
+        short *band_buffer = NULL;
+        switch (band)
+        {
+        case 0:
+            band_buffer = band_1;
+            break;
+        case 1:
+            band_buffer = band_2;
+            break;
+        case 2:
+            band_buffer = band_3;
+            break;
+        case 3:
+            band_buffer = band_4;
+            break;
+        case 4:
+            band_buffer = band_5;
+            break;
+        case 5:
+            band_buffer = band_6;
+            break;
+        }
+
+        for (int i = 0; i < frames; i++)
+        {
+            band_buffer[i] = (short)(reconstructed[i]);
+        }
+    }
+
+    // Cleanup
+    free(in);
+    free(out);
+    free(reconstructed);
+}
+
 void modify_band(int band_number)
 {
     // TODO: Modify each band here and store the modified band back in its respective buffer
@@ -14,7 +123,6 @@ void modify_band(int band_number)
     float gain = 1.0;
     float distortion = 0.0; // Distort amount
 
-    // Select the appropriate buffer based on band number
     switch (band_number)
     {
     case 0:
@@ -84,85 +192,6 @@ void modify_band(int band_number)
         // save back into buffer
         band_buffer[i] = (short)sample;
     }
-}
-
-// Function to process FFT and reconstruct audio
-void process_audio_bands(short *buffer, int frames)
-{
-    int N = frames * CHANNELS; // Total number of samples
-    double *in = fftw_malloc(sizeof(double) * N);
-    fftw_complex *out = fftw_malloc(sizeof(fftw_complex) * (N / 2 + 1));
-    fftw_plan plan_forward = fftw_plan_dft_r2c_1d(N, in, out, FFTW_ESTIMATE);
-    fftw_plan plan_inverse = fftw_plan_dft_c2r_1d(N, out, in, FFTW_ESTIMATE);
-
-    // Copy audio data into the FFT input buffer
-    for (int i = 0; i < N; i++)
-    {
-        in[i] = (double)buffer[i];
-    }
-
-    // Perform FFT
-    fftw_execute(plan_forward);
-
-    // Frequency band definitions
-    int band_limits[] = {BAND_1_MAX, BAND_2_MAX, BAND_3_MAX, BAND_4_MAX, BAND_5_MAX, BAND_6_MAX};
-    int band_count = 6;
-    double bin_size = (double)SAMPLE_RATE / N;
-
-    // Process each band and store the result in the global arrays
-    for (int band = 0; band < band_count; band++)
-    {
-        int lower_bin = (band == 0) ? 0 : (int)(band_limits[band - 1] / bin_size);
-        int upper_bin = (int)(band_limits[band] / bin_size);
-
-        // Zero out frequencies outside this band
-        for (int i = 0; i < N / 2 + 1; i++)
-        {
-            if (i < lower_bin || i > upper_bin)
-            {
-                out[i][0] = 0.0;
-                out[i][1] = 0.0;
-            }
-        }
-
-        fftw_execute(plan_inverse);
-
-        // Normalize and store the result in the corresponding global array
-        short *band_buffer = NULL;
-        switch (band)
-        {
-        case 0:
-            band_buffer = band_1;
-            break;
-        case 1:
-            band_buffer = band_2;
-            break;
-        case 2:
-            band_buffer = band_3;
-            break;
-        case 3:
-            band_buffer = band_4;
-            break;
-        case 4:
-            band_buffer = band_5;
-            break;
-        case 5:
-            band_buffer = band_6;
-            break;
-        }
-
-        // Store the processed audio band into its corresponding global array
-        for (int i = 0; i < frames; i++)
-        {
-            band_buffer[i] = (short)(in[i] / N); // Normalize and store
-        }
-    }
-
-    // Cleanup FFTW resources
-    fftw_destroy_plan(plan_forward);
-    fftw_destroy_plan(plan_inverse);
-    fftw_free(in);
-    fftw_free(out);
 }
 
 void process_audio()
@@ -246,7 +275,6 @@ void process_audio()
 
         process_audio_bands(buffer, frames);
 
-        // TODO: Here is where you will call the modify_bands function
         for (int i = 0; i < 6; i++)
         {
             modify_band(i);
