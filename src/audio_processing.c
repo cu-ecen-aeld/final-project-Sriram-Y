@@ -1,196 +1,91 @@
 #include "audio_processing.h"
-#include <math.h>
 
-#define PI 3.14159265358979323846
-
-short band_1[BUFFER_SIZE];
-short band_2[BUFFER_SIZE];
-short band_3[BUFFER_SIZE];
-short band_4[BUFFER_SIZE];
-short band_5[BUFFER_SIZE];
-short band_6[BUFFER_SIZE];
-
-typedef struct
+// Perform FFT
+void fft(short *input, double complex *output, int n)
 {
-    double real;
-    double imag;
-} Complex;
-
-void dft(const double *in, Complex *out, int N)
-{
-    for (int k = 0; k < N; k++)
+    if (n == 1)
     {
-        out[k].real = 0;
-        out[k].imag = 0;
-        for (int n = 0; n < N; n++)
-        {
-            double angle = -2 * PI * k * n / N;
-            out[k].real += in[n] * cos(angle);
-            out[k].imag += in[n] * sin(angle);
-        }
+        output[0] = input[0];
+        return;
+    }
+
+    double complex even[n / 2];
+    double complex odd[n / 2];
+    for (int i = 0; i < n / 2; i++)
+    {
+        even[i] = input[2 * i];
+        odd[i] = input[2 * i + 1];
+    }
+
+    double complex even_fft[n / 2];
+    double complex odd_fft[n / 2];
+    fft((short *)even, even_fft, n / 2);
+    fft((short *)odd, odd_fft, n / 2);
+
+    for (int k = 0; k < n / 2; k++)
+    {
+        double complex t = cexp(-2.0 * I * M_PI * k / n) * odd_fft[k];
+        output[k] = even_fft[k] + t;
+        output[k + n / 2] = even_fft[k] - t;
     }
 }
 
-void idft(const Complex *in, double *out, int N)
+// Perform inverse FFT
+void ifft(double complex *input, double complex *output, int n)
 {
-    for (int n = 0; n < N; n++)
+    for (int i = 0; i < n; i++)
     {
-        out[n] = 0;
-        for (int k = 0; k < N; k++)
-        {
-            double angle = 2 * PI * k * n / N;
-            out[n] += in[k].real * cos(angle) - in[k].imag * sin(angle);
-        }
-        out[n] /= N; // Normalize
+        input[i] = conj(input[i]);
+    }
+
+    fft((short *)input, output, n);
+
+    for (int i = 0; i < n; i++)
+    {
+        output[i] = conj(output[i]) / n;
     }
 }
 
-void process_audio_bands(short *buffer, int frames)
+// Split into frequency bands
+void split_into_bands(double complex *fft_data, double complex *bands[6], int n)
 {
-    int N = frames * CHANNELS;
-    double *in = malloc(sizeof(double) * N);
-    Complex *out = malloc(sizeof(Complex) * N);
-    double *reconstructed = malloc(sizeof(double) * N);
+    int band_limits[6];
+    band_limits[0] = (int)((BAND_1_MAX / (double)SAMPLE_RATE) * n);
+    band_limits[1] = (int)((BAND_2_MAX / (double)SAMPLE_RATE) * n);
+    band_limits[2] = (int)((BAND_3_MAX / (double)SAMPLE_RATE) * n);
+    band_limits[3] = (int)((BAND_4_MAX / (double)SAMPLE_RATE) * n);
+    band_limits[4] = (int)((BAND_5_MAX / (double)SAMPLE_RATE) * n);
+    band_limits[5] = (int)((BAND_6_MAX / (double)SAMPLE_RATE) * n);
 
-    for (int i = 0; i < N; i++)
+    // Loop through each band and assign corresponding frequency data
+    for (int band = 0; band < 6; band++)
     {
-        in[i] = (double)buffer[i];
-    }
-
-    dft(in, out, N);
-
-    int band_limits[] = {BAND_1_MAX, BAND_2_MAX, BAND_3_MAX, BAND_4_MAX, BAND_5_MAX, BAND_6_MAX};
-    int band_count = 6;
-    double bin_size = (double)SAMPLE_RATE / N;
-
-    // Process each band
-    for (int band = 0; band < band_count; band++)
-    {
-        int lower_bin = (band == 0) ? 0 : (int)(band_limits[band - 1] / bin_size);
-        int upper_bin = (int)(band_limits[band] / bin_size);
-
-        // Zero out frequencies outside this band
-        for (int i = 0; i < N; i++)
+        // Starting index for the band
+        int lower_limit;
+        if (band == 0)
         {
-            if (i < lower_bin || i > upper_bin)
+            lower_limit = 0; // For the first band, the lower limit is 0
+        }
+        else
+        {
+            lower_limit = band_limits[band - 1]; // For other bands, the lower limit is the previous band's upper limit
+        }
+        int upper_limit = band_limits[band]; // Ending index for the band
+
+        // Initialize the band's frequency data to 0
+        for (int i = lower_limit; i < upper_limit; i++)
+        {
+            bands[band][i] = fft_data[i];
+        }
+
+        // Zero out the frequencies outside the band range
+        for (int i = 0; i < n; i++)
+        {
+            if (i < lower_limit || i >= upper_limit)
             {
-                out[i].real = 0.0;
-                out[i].imag = 0.0;
+                bands[band][i] = 0;
             }
         }
-
-        idft(out, reconstructed, N);
-
-        short *band_buffer = NULL;
-        switch (band)
-        {
-        case 0:
-            band_buffer = band_1;
-            break;
-        case 1:
-            band_buffer = band_2;
-            break;
-        case 2:
-            band_buffer = band_3;
-            break;
-        case 3:
-            band_buffer = band_4;
-            break;
-        case 4:
-            band_buffer = band_5;
-            break;
-        case 5:
-            band_buffer = band_6;
-            break;
-        }
-
-        for (int i = 0; i < frames; i++)
-        {
-            band_buffer[i] = (short)(reconstructed[i]);
-        }
-    }
-
-    // Cleanup
-    free(in);
-    free(out);
-    free(reconstructed);
-}
-
-void modify_band(int band_number)
-{
-    // TODO: Modify each band here and store the modified band back in its respective buffer
-    short *band_buffer;
-    float gain = 1.0;
-    float distortion = 0.0; // Distort amount
-
-    switch (band_number)
-    {
-    case 0:
-        band_buffer = band_1;
-        break;
-    case 1:
-        band_buffer = band_2;
-        break;
-    case 2:
-        band_buffer = band_3;
-        break;
-    case 3:
-        band_buffer = band_4;
-        break;
-    case 4:
-        band_buffer = band_5;
-        break;
-    case 5:
-        band_buffer = band_6;
-        break;
-    default:
-        band_buffer = band_1;
-        break; // Invalid band number
-    }
-
-    switch (band_number)
-    {
-    case 0:         // low frequencies
-        gain = 1.2; // Boost bass by a small amount
-        break;
-    case 1: // Low to mid frequencies
-        gain = 1.1;
-        break;
-    case 2: // mid frequencies
-        gain = 1.0;
-        break;
-    case 3:               // mid to upper frequencies frequencies
-        gain = 0.9;       // Reduce slightly
-        distortion = 0.1; // Add slight distortion
-        break;
-    case 4: // upper frequencies
-        gain = 0.8;
-        break;
-    case 5: // high frequencies
-        gain = 0.7;
-        break;
-    }
-
-    // Process each sample in the buffer
-    for (int i = 0; i < BUFFER_SIZE; i++)
-    {
-        float sample = band_buffer[i];
-
-        sample *= gain; // amplify/reduce gain value
-
-        if (distortion > 0.0)
-        { // apply distortion if needed
-            sample = tanh(sample * (1.0 + distortion * 3.0)) / (1.0 + distortion);
-        }
-
-        // prevent overflow for the edited samples
-        if (sample > 32767)
-            sample = 32767;
-        if (sample < -32767)
-            sample = -32767;
-
-        // save back into buffer
-        band_buffer[i] = (short)sample;
     }
 }
 
@@ -203,14 +98,13 @@ void process_audio()
     int err;
     int sample_rate = SAMPLE_RATE;
 
-    // Open the default PCM device for capturing audio (input)
+    // Open PCM device for capture
     if ((err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_CAPTURE, 0)) < 0)
     {
         fprintf(stderr, "Error: unable to open PCM device: %s\n", snd_strerror(err));
         exit(1);
     }
 
-    // Allocate memory for ALSA hardware parameters
     snd_pcm_hw_params_malloc(&params);
     if ((err = snd_pcm_hw_params_any(handle, params)) < 0)
     {
@@ -218,44 +112,44 @@ void process_audio()
         exit(1);
     }
 
-    // Set the hardware parameters (16-bit signed little-endian format, 2 channels, and sample rate)
-    if ((err = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set access type: %s\n", snd_strerror(err));
-        exit(1);
-    }
-
-    if ((err = snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_S16_LE)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set sample format: %s\n", snd_strerror(err));
-        exit(1);
-    }
-
-    if ((err = snd_pcm_hw_params_set_channels(handle, params, CHANNELS)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set channels: %s\n", snd_strerror(err));
-        exit(1);
-    }
-
-    // Pass a pointer to the sample_rate variable
-    if ((err = snd_pcm_hw_params_set_rate_near(handle, params, &sample_rate, 0)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set sample rate: %s\n", snd_strerror(err));
-        exit(1);
-    }
-
-    // Apply hardware parameters
-    if ((err = snd_pcm_hw_params(handle, params)) < 0)
+    // Set the hardware parameters
+    if ((err = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0 ||
+        (err = snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_S16_LE)) < 0 ||
+        (err = snd_pcm_hw_params_set_channels(handle, params, CHANNELS)) < 0 ||
+        (err = snd_pcm_hw_params_set_rate_near(handle, params, &sample_rate, 0)) < 0 ||
+        (err = snd_pcm_hw_params(handle, params)) < 0)
     {
         fprintf(stderr, "Error: unable to set hardware parameters: %s\n", snd_strerror(err));
         exit(1);
     }
 
-    // Allocate the buffer for audio data
     snd_pcm_hw_params_get_period_size(params, &frames, 0);
     buffer = (short *)malloc(frames * sizeof(short) * CHANNELS);
 
-    // Keep capturing the audio
+    double complex *fft_data = (double complex *)malloc(frames * sizeof(double complex));
+    double complex *ifft_data = (double complex *)malloc(frames * sizeof(double complex));
+    double complex *bands[6];
+    for (int i = 0; i < 6; i++)
+    {
+        bands[i] = (double complex *)malloc(frames * sizeof(double complex));
+    }
+
+    // Initialize LAME for final MP3 encoding
+    lame_t lame_encoder = lame_init();
+    lame_set_in_samplerate(lame_encoder, SAMPLE_RATE);
+    lame_set_num_channels(lame_encoder, CHANNELS);
+    lame_set_brate(lame_encoder, 128);
+    lame_init_params(lame_encoder);
+
+    FILE *output_file = fopen("final_output.mp3", "wb");
+    if (!output_file)
+    {
+        fprintf(stderr, "Error: unable to open output MP3 file.\n");
+        exit(1);
+    }
+
+    unsigned char mp3_buffer[BUFFER_SIZE];
+
     while (1)
     {
         err = snd_pcm_readi(handle, buffer, frames);
@@ -263,25 +157,60 @@ void process_audio()
         {
             fprintf(stderr, "Error: buffer overrun occurred\n");
             snd_pcm_prepare(handle);
+            continue;
         }
         else if (err < 0)
         {
             fprintf(stderr, "Error: failed to read audio data: %s\n", snd_strerror(err));
+            break;
         }
         else if (err != frames)
         {
             fprintf(stderr, "Error: short read, read %d frames instead of %d\n", err, frames);
+            continue;
         }
 
-        process_audio_bands(buffer, frames);
+        // FFT and band processing
+        fft(buffer, fft_data, frames);
+        split_into_bands(fft_data, bands, frames);
 
-        for (int i = 0; i < 6; i++)
+        // Combine all bands into a single waveform
+        for (int i = 0; i < frames; i++)
         {
-            modify_band(i);
+            ifft_data[i] = 0;
+            for (int j = 0; j < 6; j++)
+            {
+                ifft_data[i] += bands[j][i];
+            }
         }
+
+        // Inverse FFT to get time-domain waveform
+        ifft(ifft_data, fft_data, frames);
+
+        // Convert complex waveform to PCM format
+        for (int i = 0; i < frames; i++)
+        {
+            buffer[i] = (short)creal(fft_data[i]);
+        }
+
+        // Encode to MP3
+        int mp3_size = lame_encode_buffer_interleaved(lame_encoder, buffer, frames, mp3_buffer, BUFFER_SIZE);
+        fwrite(mp3_buffer, sizeof(unsigned char), mp3_size, output_file);
     }
+
+    // Flush and close MP3 file
+    int final_mp3_size = lame_encode_flush(lame_encoder, mp3_buffer, BUFFER_SIZE);
+    fwrite(mp3_buffer, sizeof(unsigned char), final_mp3_size, output_file);
+    fclose(output_file);
 
     // Clean up
     free(buffer);
+    free(fft_data);
+    free(ifft_data);
+    for (int i = 0; i < 6; i++)
+    {
+        free(bands[i]);
+    }
+    lame_close(lame_encoder);
     snd_pcm_close(handle);
 }
