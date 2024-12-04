@@ -10,6 +10,8 @@
 #define SAMPLE_RATE 44100
 #define CHANNELS 2
 #define BUFFER_SIZE 1024
+#define MAX_SAMP    32767
+#define N_MAX_SAMP  -32767
 
 #define BAND_1_MAX 60
 #define BAND_2_MAX 250
