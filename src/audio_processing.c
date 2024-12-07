@@ -1,12 +1,44 @@
 #include "audio_processing.h"
 
-// Perform FFT
-void fft(short *input, double complex *output, int n)
+// Check if a number is a power of two
+int is_power_of_two(int n)
+{
+    return (n > 0) && ((n & (n - 1)) == 0);
+}
+
+// Get the next power of two greater than or equal to n
+int next_power_of_two(int n)
+{
+    int power = 1;
+    while (power < n)
+    {
+        power *= 2;
+    }
+    return power;
+}
+
+// Prepare FFT input (convert short to double complex)
+void prepare_fft_input(short *input, double complex *output, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        output[i] = (double)input[i]; // Convert short to double
+    }
+}
+
+// Perform FFT (Fast Fourier Transform)
+void fft(double complex *input, double complex *output, int n)
 {
     if (n == 1)
     {
         output[0] = input[0];
         return;
+    }
+
+    if (n <= 0)
+    {
+        fprintf(stderr, "Error: Invalid FFT size %d\n", n);
+        exit(1);
     }
 
     double complex even[n / 2];
@@ -19,8 +51,8 @@ void fft(short *input, double complex *output, int n)
 
     double complex even_fft[n / 2];
     double complex odd_fft[n / 2];
-    fft((short *)even, even_fft, n / 2);
-    fft((short *)odd, odd_fft, n / 2);
+    fft(even, even_fft, n / 2);
+    fft(odd, odd_fft, n / 2);
 
     for (int k = 0; k < n / 2; k++)
     {
@@ -30,7 +62,7 @@ void fft(short *input, double complex *output, int n)
     }
 }
 
-// Perform inverse FFT
+// Perform inverse FFT (Inverse Fast Fourier Transform)
 void ifft(double complex *input, double complex *output, int n)
 {
     for (int i = 0; i < n; i++)
@@ -38,7 +70,7 @@ void ifft(double complex *input, double complex *output, int n)
         input[i] = conj(input[i]);
     }
 
-    fft((short *)input, output, n);
+    fft(input, output, n);
 
     for (int i = 0; i < n; i++)
     {
@@ -46,7 +78,7 @@ void ifft(double complex *input, double complex *output, int n)
     }
 }
 
-// Split into frequency bands
+// Split the FFT data into frequency bands
 void split_into_bands(double complex *fft_data, double complex *bands[6], int n)
 {
     int band_limits[6];
@@ -61,15 +93,7 @@ void split_into_bands(double complex *fft_data, double complex *bands[6], int n)
     for (int band = 0; band < 6; band++)
     {
         // Starting index for the band
-        int lower_limit;
-        if (band == 0)
-        {
-            lower_limit = 0; // For the first band, the lower limit is 0
-        }
-        else
-        {
-            lower_limit = band_limits[band - 1]; // For other bands, the lower limit is the previous band's upper limit
-        }
+        int lower_limit = (band == 0) ? 0 : band_limits[band - 1];
         int upper_limit = band_limits[band]; // Ending index for the band
 
         // Initialize the band's frequency data to 0
@@ -77,18 +101,10 @@ void split_into_bands(double complex *fft_data, double complex *bands[6], int n)
         {
             bands[band][i] = fft_data[i];
         }
-
-        // Zero out the frequencies outside the band range
-        for (int i = 0; i < n; i++)
-        {
-            if (i < lower_limit || i >= upper_limit)
-            {
-                bands[band][i] = 0;
-            }
-        }
     }
 }
 
+// Process the audio (main function)
 void process_audio()
 {
     snd_pcm_t *handle;
@@ -170,12 +186,22 @@ void process_audio()
             continue;
         }
 
+        // Ensure FFT size is a power of two
+        int fft_size = frames;
+        if (!is_power_of_two(fft_size))
+        {
+            fft_size = next_power_of_two(frames);
+        }
+
+        // Prepare the FFT input
+        prepare_fft_input(buffer, fft_data, fft_size);
+
         // FFT and band processing
-        fft(buffer, fft_data, frames);
-        split_into_bands(fft_data, bands, frames);
+        fft(fft_data, fft_data, fft_size);
+        split_into_bands(fft_data, bands, fft_size);
 
         // Combine all bands into a single waveform
-        for (int i = 0; i < frames; i++)
+        for (int i = 0; i < fft_size; i++)
         {
             ifft_data[i] = 0;
             for (int j = 0; j < 6; j++)
@@ -185,7 +211,7 @@ void process_audio()
         }
 
         // Inverse FFT to get time-domain waveform
-        ifft(ifft_data, fft_data, frames);
+        ifft(ifft_data, fft_data, fft_size);
 
         // Convert complex waveform to PCM format
         for (int i = 0; i < frames; i++)
