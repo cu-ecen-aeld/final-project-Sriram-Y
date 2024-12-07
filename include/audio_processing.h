@@ -9,7 +9,7 @@
 #include <complex.h>
 #include <lame/lame.h>
 
-#define SAMPLE_RATE 44100
+#define SAMPLE_RATE 48000
 #define CHANNELS 2
 #define BUFFER_SIZE 1024
 

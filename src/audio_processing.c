@@ -1,4 +1,27 @@
 #include "audio_processing.h"
+#include <signal.h>
+#include <unistd.h>
+
+unsigned char *mp3_buffer_full;
+size_t mp3_buffer_full_size = 0;
+size_t mp3_buffer_capacity = 1024 * 1024;
+
+// Function to handle SIGINT (Ctrl+C)
+void handle_sigint(int sig)
+{
+    FILE *output_file = fopen("final_output.mp3", "wb");
+    if (!output_file)
+    {
+        fprintf(stderr, "Error: unable to open output MP3 file.\n");
+        exit(1);
+    }
+
+    fwrite(mp3_buffer_full, sizeof(unsigned char), mp3_buffer_full_size, output_file);
+    fclose(output_file);
+
+    free(mp3_buffer_full);
+    exit(0);
+}
 
 // Check if a number is a power of two
 int is_power_of_two(int n)
@@ -157,12 +180,8 @@ void process_audio()
     lame_set_brate(lame_encoder, 128);
     lame_init_params(lame_encoder);
 
-    FILE *output_file = fopen("final_output.mp3", "wb");
-    if (!output_file)
-    {
-        fprintf(stderr, "Error: unable to open output MP3 file.\n");
-        exit(1);
-    }
+    signal(SIGINT, handle_sigint);
+    mp3_buffer_full = (unsigned char *)malloc(mp3_buffer_capacity);
 
     unsigned char mp3_buffer[BUFFER_SIZE];
 
@@ -221,13 +240,16 @@ void process_audio()
 
         // Encode to MP3
         int mp3_size = lame_encode_buffer_interleaved(lame_encoder, buffer, frames, mp3_buffer, BUFFER_SIZE);
-        fwrite(mp3_buffer, sizeof(unsigned char), mp3_size, output_file);
-    }
 
-    // Flush and close MP3 file
-    int final_mp3_size = lame_encode_flush(lame_encoder, mp3_buffer, BUFFER_SIZE);
-    fwrite(mp3_buffer, sizeof(unsigned char), final_mp3_size, output_file);
-    fclose(output_file);
+        if (mp3_buffer_full_size + mp3_size > mp3_buffer_capacity)
+        {
+            mp3_buffer_capacity *= 2;
+            mp3_buffer_full = (unsigned char *)realloc(mp3_buffer_full, mp3_buffer_capacity);
+        }
+
+        memcpy(mp3_buffer_full + mp3_buffer_full_size, mp3_buffer, mp3_size);
+        mp3_buffer_full_size += mp3_size;
+    }
 
     // Clean up
     free(buffer);
