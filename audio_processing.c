@@ -6,6 +6,14 @@ unsigned char *mp3_buffer_full;
 size_t mp3_buffer_full_size = 0;
 size_t mp3_buffer_capacity = 1024 * 1024;
 
+void apply_gain_to_band(double complex *band, int band_size, double gain)
+{
+    for (int i = 0; i < band_size; i++)
+    {
+        band[i] *= gain;
+    }
+}
+
 // Function to handle SIGINT (Ctrl+C)
 void handle_sigint(int sig)
 {
@@ -135,7 +143,7 @@ void process_audio()
     short *buffer;
     snd_pcm_uframes_t frames;
     int err;
-    int sample_rate = SAMPLE_RATE;
+    unsigned int sample_rate = SAMPLE_RATE;
 
     // Open PCM device for capture
     if ((err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_CAPTURE, 0)) < 0)
@@ -201,7 +209,7 @@ void process_audio()
         }
         else if (err != frames)
         {
-            fprintf(stderr, "Error: short read, read %d frames instead of %d\n", err, frames);
+            fprintf(stderr, "Error: short read, read %d frames instead of %ld\n", err, frames);
             continue;
         }
 
@@ -218,6 +226,12 @@ void process_audio()
         // FFT and band processing
         fft(fft_data, fft_data, fft_size);
         split_into_bands(fft_data, bands, fft_size);
+
+        double gains[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 10.0};
+        for (int j = 0; j < 6; j++)
+        {
+            apply_gain_to_band(bands[j], fft_size, gains[j]);
+        }
 
         // Combine all bands into a single waveform
         for (int i = 0; i < fft_size; i++)
