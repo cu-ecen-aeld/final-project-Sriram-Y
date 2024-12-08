@@ -131,7 +131,7 @@ void split_into_bands(double complex *fft_data, double complex *bands[6], int n)
 void process_audio()
 {
     snd_pcm_t *handle; /* Pointer to manage PCM (Pulse Code Modulation) device*/
-    snd_pcm_t *playback_handle; //output
+    //snd_pcm_t *playback_handle; //output
     snd_pcm_hw_params_t *params; /* Pointer for hardware parameters */
     short *buffer; /* Array to store audio samples*/
     snd_pcm_uframes_t frames; /* number of frames to process */
@@ -325,6 +325,6 @@ void process_audio()
     }
     lame_close(lame_encoder);
     snd_pcm_close(handle);
-    snd_pcm_close(playback_handle);
+    //snd_pcm_close(playback_handle);
     snd_pcm_hw_params_free(params);
 }
