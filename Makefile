@@ -3,13 +3,14 @@ CROSS_COMPILE ?=
 
 # Compiler and flags
 CC = $(CROSS_COMPILE)gcc
-CFLAGS = -g -Wall -Werror
+CFLAGS = -g -Wall 
+LDFLAGS = -lasound -lmp3lame -lfftw3 -lm
 
 # Target binary
 TARGET = audioeqdriver
 
 # Source files and object files
-SRC = $(TARGET).c
+SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
 
 # Default
@@ -17,12 +18,12 @@ all: $(TARGET)
 default: $(TARGET)
 
 # Build executable from object files
-$(TARGET): $(TARGET).c
-	$(CC) $(CFLAGS) -pthread -lasound -lmp3lame -lfftw3 -lm -o $@ $^
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) -pthread -o $@ $^ $(LDFLAGS)
 
 # Clean
 clean:
-	rm -rf *.o $(TARGET) *.elf *.map ./build && mkdir build
+	rm -f *.o $(TARGET) *.elf *.map
 
 # Phony targets
 .PHONY: 
