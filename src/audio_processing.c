@@ -2,49 +2,9 @@
 #include <signal.h>
 #include <unistd.h>
 
-<<<<<<< HEAD
-short band_1[BUFFER_SIZE];
-short band_2[BUFFER_SIZE];
-short band_3[BUFFER_SIZE];
-short band_4[BUFFER_SIZE];
-short band_5[BUFFER_SIZE];
-short band_6[BUFFER_SIZE];
-short output_buffer[BUFFER_SIZE];
-
-void combine_bands(snd_pcm_t *handle, int frames)
-{
-    memset(output_buffer, 0, BUFFER_SIZE * sizeof(short));
-
-    for (int i=0; i < frames; i++)
-    {
-        float acc = 0.0f;
-        acc += band_1[i];
-        acc += band_2[i];
-        acc += band_3[i];
-        acc += band_4[i];
-        acc += band_5[i];
-        acc += band_6[i];
-
-        if (acc > MAX_SAMP) acc = MAX_SAMP;
-        if (acc < N_MAX_SAMP) acc = N_MAX_SAMP;
-
-        output_buffer[i] = (short) acc;
-    }
-
-    int err = snd_pcm_writei(handle, output_buffer, frames);
-    if (err == -EPIPE)
-    {
-        fprintf(stderr, "Error: buffer overrun occurred\n");
-        snd_pcm_prepare(handle);
-    }
-
-
-}
-=======
 unsigned char *mp3_buffer_full;
 size_t mp3_buffer_full_size = 0;
 size_t mp3_buffer_capacity = 1024 * 1024;
->>>>>>> origin/without-fftw
 
 // Function to handle SIGINT (Ctrl+C)
 void handle_sigint(int sig)
@@ -125,66 +85,21 @@ void fft(double complex *input, double complex *output, int n)
     }
 }
 
-<<<<<<< HEAD
-// Function to process FFT and reconstruct audio
-// Takes raw audio buffer and number of frames as input
-void process_audio_bands(short *buffer, int frames)
-{
-    int N = frames * CHANNELS; // Total number of samples
-    double *in = fftw_malloc(sizeof(double) * N); // Real-values time domain samples
-    fftw_complex *out = fftw_malloc(sizeof(fftw_complex) * (N / 2 + 1)); // Complex frequency domainn data
-    fftw_plan plan_forward = fftw_plan_dft_r2c_1d(N, in, out, FFTW_ESTIMATE); // forward transform
-    fftw_plan plan_inverse = fftw_plan_dft_c2r_1d(N, out, in, FFTW_ESTIMATE); // inverse transform 
-
-    // Copy audio data into the FFT input buffer
-    for (int i = 0; i < N; i++)
-=======
 // Perform inverse FFT (Inverse Fast Fourier Transform)
 void ifft(double complex *input, double complex *output, int n)
 {
     for (int i = 0; i < n; i++)
->>>>>>> origin/without-fftw
     {
         input[i] = conj(input[i]);
     }
 
-<<<<<<< HEAD
-
-    // Perform FFT
-    fftw_execute(plan_forward);
-
-    // Frequency band definitions
-    int band_limits[] = {BAND_1_MAX, BAND_2_MAX, BAND_3_MAX, BAND_4_MAX, BAND_5_MAX, BAND_6_MAX};
-    // Defines maximum frequency for each band
-    int band_count = 6;
-    double bin_size = (double)SAMPLE_RATE / N;
-=======
     fft(input, output, n);
->>>>>>> origin/without-fftw
 
     for (int i = 0; i < n; i++)
     {
-<<<<<<< HEAD
-        int lower_bin = (band == 0) ? 0 : (int)(band_limits[band - 1] / bin_size);
-        int upper_bin = (int)(band_limits[band] / bin_size);
-        // For each, calculates which FFT bins correspond to its frequency range
-
-        // Zero out frequencies outside this band
-        for (int i = 0; i < N / 2 + 1; i++)
-        {
-            if (i < lower_bin || i > upper_bin)
-            {
-                out[i][0] = 0.0;
-                out[i][1] = 0.0;
-            }
-        }
-
-        fftw_execute(plan_inverse);
-=======
         output[i] = conj(output[i]) / n;
     }
 }
->>>>>>> origin/without-fftw
 
 // Split the FFT data into frequency bands
 void split_into_bands(double complex *fft_data, double complex *bands[6], int n)
@@ -221,77 +136,46 @@ void process_audio()
     short *buffer; /* Array to store audio samples*/
     snd_pcm_uframes_t frames; /* number of frames to process */
     int err; 
-    int sample_rate = SAMPLE_RATE; /* Audio sampling rate */
+    unsigned int sample_rate = SAMPLE_RATE; /* Audio sampling rate */
 
-<<<<<<< HEAD
-    // Open the default PCM device for capturing audio (input)
-    // Capture mode (recording)
-    // Default mode : 0
-=======
     // Open PCM device for capture
->>>>>>> origin/without-fftw
     if ((err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_CAPTURE, 0)) < 0)
     {
         fprintf(stderr, "Error: unable to open PCM device: %s\n", snd_strerror(err));
         exit(1);
     }
 
-<<<<<<< HEAD
-    if ((err = snd_pcm_open(&playback_handle, "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0)
+    /* Allocating memory for hardware parameters that will be used to configure the PCM device. */
+    if ((err = snd_pcm_hw_params_malloc(&params)) < 0)
     {
-        fprintf(stderr, "Error: unable to open PCM device: %s\n", snd_strerror(err));
+        fprintf(stderr, "Error: failed to allocate an invalid snd_pcm_hw_params_t: %s\n", snd_strerror(err));
         exit(1);
     }
 
-    // Allocate memory for ALSA hardware parameters
-=======
->>>>>>> origin/without-fftw
-    snd_pcm_hw_params_malloc(&params);
-
-
-    // Fills params with default values for the PCM device
+    /* Fills params with a full configuration space,
+        basically fills it with all possible configurations
+        that the hardware supports */ 
     if ((err = snd_pcm_hw_params_any(handle, params)) < 0)
     {
         fprintf(stderr, "Error: unable to initialize capture hardware parameters: %s\n", snd_strerror(err));
         exit(1);
     }
-    if ((err = snd_pcm_hw_params_any(playback_handle, params)) < 0)
-    {
-        fprintf(stderr, "Error: unable to initialize playback hardware parameters: %s\n", snd_strerror(err));
-        exit(1);
-    }
+    // if ((err = snd_pcm_hw_params_any(playback_handle, params)) < 0)
+    // {
+    //     fprintf(stderr, "Error: unable to initialize playback hardware parameters: %s\n", snd_strerror(err));
+    //     exit(1);
+    // }
 
-<<<<<<< HEAD
-    // Set the hardware parameters (16-bit signed little-endian format, 2 channels, and sample rate)
-    // Sets interleaved access mode (left and right channel samples are alternated)
-    if ((err = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set access type capture: %s\n", snd_strerror(err));
-        exit(1);
-    }
-    if ((err = snd_pcm_hw_params_set_access(playback_handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set access type playback: %s\n", snd_strerror(err));
-        exit(1);
-    }
-
-
-    // Sets 16-bit signed little-endian sample format.
-    if ((err = snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_S16_LE)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set sample format capture: %s\n", snd_strerror(err));
-        exit(1);
-    }
-    if ((err = snd_pcm_hw_params_set_format(playback_handle, params, SND_PCM_FORMAT_S16_LE)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set sample format playback: %s\n", snd_strerror(err));
-        exit(1);
-    }
-
-    // Sets the number of channels, 2.
-    if ((err = snd_pcm_hw_params_set_channels(handle, params, CHANNELS)) < 0)
-=======
     // Set the hardware parameters
+    /**
+     * snd_pcm_hw_params_set_access(): Restrict to contain only one access type
+     * SND_PCM_ACCESS_RW_INTERLEAVED: snd_pcm_readi/snd_pcm_writei access
+     * snd_pcm_hw_params_set_format(): Restrict to contain only one format
+     * SND_PCM_FORMAT_S16_LE - Signed 16 bit Little Endian
+     * snd_pcm_hw_params_set_channels(): Restrict to contain only one channels count (2, left and right audio)
+     * snd_pcm_hw_params_set_rate_near(): Restrict to contain a rate nearest to the specified rate. 48000
+     * snd_pcm_hw_params(): Apply the set hardware parameters
+     */
     if ((err = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0 ||
         (err = snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_S16_LE)) < 0 ||
         (err = snd_pcm_hw_params_set_channels(handle, params, CHANNELS)) < 0 ||
@@ -302,59 +186,53 @@ void process_audio()
         exit(1);
     }
 
-    snd_pcm_hw_params_get_period_size(params, &frames, 0);
-    buffer = (short *)malloc(frames * sizeof(short) * CHANNELS);
+    fprintf(stdout, "Sample rate set: %u\n", sample_rate);
 
+    /** Gets the size of one period, in terms of frames.
+     * A frame contains one sample for each channel.
+     * So for each channel, one frame has two samples. Determines
+     * how many frames of audio will be captured/played before the
+     * hardware generates an interrupt. 1024 frames -> 2048 samples*/ 
+    if((err = snd_pcm_hw_params_get_period_size(params, &frames, 0)) < 0)
+    {
+        fprintf(stderr, "Error: unable to get period size in frames.");
+        exit(1);
+    }
+
+    buffer = (short *)malloc(frames * sizeof(short) * CHANNELS);
     double complex *fft_data = (double complex *)malloc(frames * sizeof(double complex));
     double complex *ifft_data = (double complex *)malloc(frames * sizeof(double complex));
+    if (fft_data == NULL || ifft_data == NULL)
+    {
+        fprintf(stderr, "Error: failed to allocate FFT buffers.\n");
+        exit(1);
+    }
+
     double complex *bands[6];
     for (int i = 0; i < 6; i++)
->>>>>>> origin/without-fftw
     {
         bands[i] = (double complex *)malloc(frames * sizeof(double complex));
+        if (bands[i] == NULL)
+        {
+            fprintf(stderr, "Error: failed to allocate band buffer %d\n", i);
+            exit(1);
+        }
     }
-    if ((err = snd_pcm_hw_params_set_channels(playback_handle, params, CHANNELS)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set channels: %s\n", snd_strerror(err));
-        exit(1);
-    }
-
-<<<<<<< HEAD
-    // Pass a pointer to the sample_rate variable
-    if ((err = snd_pcm_hw_params_set_rate_near(handle, params, &sample_rate, 0)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set sample rate: %s\n", snd_strerror(err));
-        exit(1);
-    }
-    if ((err = snd_pcm_hw_params_set_rate_near(playback_handle, params, &sample_rate, 0)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set sample rate: %s\n", snd_strerror(err));
-        exit(1);
-    }
+    // if ((err = snd_pcm_hw_params_set_channels(playback_handle, params, CHANNELS)) < 0)
+    // {
+    //     fprintf(stderr, "Error: unable to set channels: %s\n", snd_strerror(err));
+    //     exit(1);
+    // }
 
 
-    // Apply all hardware parameters
-    if ((err = snd_pcm_hw_params(handle, params)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set hardware parameters: %s\n", snd_strerror(err));
-        exit(1);
-    }
-    if ((err = snd_pcm_hw_params(playback_handle, params)) < 0)
-    {
-        fprintf(stderr, "Error: unable to set hardware parameters: %s\n", snd_strerror(err));
-        exit(1);
-    }
-
-    // Allocate the buffer for audio data
-    // Gets the period size (frames per period) and allocated buffer memory accordingly.
-    snd_pcm_hw_params_get_period_size(params, &frames, 0);
-    buffer = (short *)malloc(frames * sizeof(short) * CHANNELS);
-
-
-    // Keep capturing the audio
-=======
     // Initialize LAME for final MP3 encoding
+    /* Preparing the encoder to take the raw PCM audio and convert to mp3.*/
     lame_t lame_encoder = lame_init();
+    if (lame_encoder == NULL)
+    {
+        fprintf(stderr, "Error: failed to initialize LAME encoder.\n");
+        exit(1);
+    }
     lame_set_in_samplerate(lame_encoder, SAMPLE_RATE);
     lame_set_num_channels(lame_encoder, CHANNELS);
     lame_set_brate(lame_encoder, 128);
@@ -362,10 +240,14 @@ void process_audio()
 
     signal(SIGINT, handle_sigint);
     mp3_buffer_full = (unsigned char *)malloc(mp3_buffer_capacity);
+    if(mp3_buffer_full == NULL)
+    {
+        fprintf(stderr, "Error: failed to allocate mp3_buffer_full.\n");
+        exit(1);
+    }
 
     unsigned char mp3_buffer[BUFFER_SIZE];
 
->>>>>>> origin/without-fftw
     while (1)
     {
         //Reads audio data from the device into buffer
@@ -383,17 +265,10 @@ void process_audio()
         }
         else if (err != frames)
         {
-            fprintf(stderr, "Error: short read, read %d frames instead of %d\n", err, frames);
+            fprintf(stderr, "Error: short read, read %d frames instead of %ld\n", err, frames);
             continue;
         }
 
-<<<<<<< HEAD
-        //processes the captured audio data.
-        process_audio_bands(buffer, frames);
-
-        // Modify the six frequency bands.
-        for (int i = 0; i < 6; i++)
-=======
         // Ensure FFT size is a power of two
         int fft_size = frames;
         if (!is_power_of_two(fft_size))
@@ -410,7 +285,6 @@ void process_audio()
 
         // Combine all bands into a single waveform
         for (int i = 0; i < fft_size; i++)
->>>>>>> origin/without-fftw
         {
             ifft_data[i] = 0;
             for (int j = 0; j < 6; j++)
@@ -419,9 +293,6 @@ void process_audio()
             }
         }
 
-<<<<<<< HEAD
-        combine_bands(playback_handle, frames);
-=======
         // Inverse FFT to get time-domain waveform
         ifft(ifft_data, fft_data, fft_size);
 
@@ -442,7 +313,6 @@ void process_audio()
 
         memcpy(mp3_buffer_full + mp3_buffer_full_size, mp3_buffer, mp3_size);
         mp3_buffer_full_size += mp3_size;
->>>>>>> origin/without-fftw
     }
 
     // Clean up
