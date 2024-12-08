@@ -4,7 +4,7 @@ CROSS_COMPILE ?=
 # Compiler and flags
 CC = $(CROSS_COMPILE)gcc
 CFLAGS = -g -Wall -pthread
-LIBS = -lasound -lmp3lame -lfftw3 -lm
+LDFLAGS = -lasound -lmp3lame -lfftw3 -lm
 
 # Target binary
 TARGET = audioeqdriver
@@ -20,7 +20,7 @@ default: $(TARGET)
 
 # Build target from object files
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # Compile .c files into .o files
 %.o: %.c
