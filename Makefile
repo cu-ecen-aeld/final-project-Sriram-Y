@@ -4,7 +4,7 @@ CROSS_COMPILE ?=
 # Compiler and flags
 CC = $(CROSS_COMPILE)gcc
 CFLAGS = -g -Wall -pthread
-LIBS = -lasound -lmp3lame -lm
+LIBS = -lasound -lmp3lame -lfftw3 -lm
 
 # Target binary
 TARGET = audioeqdriver
