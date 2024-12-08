@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <fftw3.h>
 #include <complex.h>
 #include <lame/lame.h>
 
