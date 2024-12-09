@@ -24,7 +24,5 @@ $(TARGET): $(OBJ)
 # Clean
 clean:
 	rm -f *.o $(TARGET) *.elf *.map
+	rm -f audioeqdriver
 
-# Phony targets
-.PHONY: 
-	all clean
