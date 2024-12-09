@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
-#include <lame/lame.h>
 
 #define SAMPLE_RATE 48000
 #define CHANNELS 2
