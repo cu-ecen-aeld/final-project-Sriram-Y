@@ -6,6 +6,11 @@ CC = $(CROSS_COMPILE)gcc
 CFLAGS += -g -Wall $(shell pkg-config --cflags alsa)
 LDFLAGS += $(shell pkg-config --libs alsa) -lmp3lame -lfftw3 -lm -pthread
 
+# Print the CFLAGS value
+print_cflags:
+	echo "echoing out CFLAGS: $(CFLAGS)"
+	echo "echoing out LDFLAGS: $(LDFLAGS)"
+
 # Target binary
 TARGET = audioeqdriver
 
@@ -13,11 +18,10 @@ TARGET = audioeqdriver
 SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
 
+all: $(TARGET)
+default: $(TARGET)
 
-# Print the CFLAGS value
-print_cflags:
-	echo "echoing out CFLAGS: $(CFLAGS)"
-	echo "echoing out LDFLAGS: $(LDFLAGS)"
+
 
 # Build executable from object files
 $(TARGET): $(OBJ)
