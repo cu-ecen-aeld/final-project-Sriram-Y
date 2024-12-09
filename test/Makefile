@@ -1,34 +1,29 @@
-# Cross-compilation setup
+# Get CROSS_COMPILE value from user
 CROSS_COMPILE ?= 
-CC = $(CROSS_COMPILE)gcc
 
-# Compiler flags
-CFLAGS = -g -Wall -Wextra -O2
+# Compiler and flags
+CC = $(CROSS_COMPILE)gcc
+CFLAGS = -g -Wall 
+LDFLAGS = -lasound -lm -pthread
 
 # Target binary
 TARGET = main
 
-# Source files
-SRC = main.c
+# Source files and object files
+SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
 
-# Default rule to build the target
+# Default
 all: $(TARGET)
 
-# Rule to build the target binary
+# Build executable from object files
 $(TARGET): $(OBJ)
-	@echo "Linking $(TARGET)..."
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-# Rule to build object files
-%.o: %.c
-	@echo "Compiling $<..."
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Clean rule to remove build artifacts
+# Clean
 clean:
-	@echo "Cleaning build artifacts..."
-	rm -f $(OBJ) $(TARGET)
+	rm -f *.o $(TARGET) *.elf *.map
 
 # Phony targets
-.PHONY: all clean
+.PHONY: 
+	all clean
