@@ -4,7 +4,7 @@ CROSS_COMPILE ?=
 # Compiler and flags
 CC = $(CROSS_COMPILE)gcc
 CFLAGS += -g -Wall $(shell pkg-config --cflags alsa)
-LDFLAGS += $(shell pkg-config --libs alsa) -lmp3lame -lfftw3 -lm -pthread
+LDFLAGS += $(shell pkg-config --libs alsa) -lfftw3 -lm -pthread -lasound
 
 # Print the CFLAGS value
 print_cflags:
