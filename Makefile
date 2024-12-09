@@ -3,8 +3,8 @@ CROSS_COMPILE ?=
 
 # Compiler and flags
 CC = $(CROSS_COMPILE)gcc
-CFLAGS = -g -Wall $(shell pkg-config --cflags alsa)
-LDFLAGS = $(shell pkg-config --libs alsa) -lmp3lame -lfftw3 -lm -pthread
+CFLAGS += -g -Wall $(shell pkg-config --cflags alsa)
+LDFLAGS += $(shell pkg-config --libs alsa) -lmp3lame -lfftw3 -lm -pthread
 
 # Target binary
 TARGET = audioeqdriver
