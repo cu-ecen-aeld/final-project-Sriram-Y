@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "audio_processing.h": "c",
-        "fftw3.h": "c"
+        "fftw3.h": "c",
+        "asoundlib.h": "c"
     }
 }
