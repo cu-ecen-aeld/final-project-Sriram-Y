@@ -15,14 +15,13 @@ OBJ = $(SRC:.c=.o)
 
 # Default
 all: $(TARGET)
-default: $(TARGET)
+# default: $(TARGET)
 
 # Build executable from object files
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 # Clean
 clean:
 	rm -f *.o $(TARGET) *.elf *.map
-	rm -f audioeqdriver
 
