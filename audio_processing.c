@@ -224,9 +224,9 @@ void process_audio()
     //     exit(1);
     // }
 
-
+    /*
     // Initialize LAME for final MP3 encoding
-    /* Preparing the encoder to take the raw PCM audio and convert to mp3.*/
+    // Preparing the encoder to take the raw PCM audio and convert to mp3.
     lame_t lame_encoder = lame_init();
     if (lame_encoder == NULL)
     {
@@ -237,6 +237,8 @@ void process_audio()
     lame_set_num_channels(lame_encoder, CHANNELS);
     lame_set_brate(lame_encoder, 128);
     lame_init_params(lame_encoder);
+
+    */
 
     signal(SIGINT, handle_sigint);
     mp3_buffer_full = (unsigned char *)malloc(mp3_buffer_capacity);
@@ -303,16 +305,16 @@ void process_audio()
         }
 
         // Encode to MP3
-        int mp3_size = lame_encode_buffer_interleaved(lame_encoder, buffer, frames, mp3_buffer, BUFFER_SIZE);
+        // int mp3_size = lame_encode_buffer_interleaved(lame_encoder, buffer, frames, mp3_buffer, BUFFER_SIZE);
 
-        if (mp3_buffer_full_size + mp3_size > mp3_buffer_capacity)
-        {
-            mp3_buffer_capacity *= 2;
-            mp3_buffer_full = (unsigned char *)realloc(mp3_buffer_full, mp3_buffer_capacity);
-        }
+        // if (mp3_buffer_full_size + mp3_size > mp3_buffer_capacity)
+        // {
+        //     mp3_buffer_capacity *= 2;
+        //     mp3_buffer_full = (unsigned char *)realloc(mp3_buffer_full, mp3_buffer_capacity);
+        // }
 
-        memcpy(mp3_buffer_full + mp3_buffer_full_size, mp3_buffer, mp3_size);
-        mp3_buffer_full_size += mp3_size;
+        // memcpy(mp3_buffer_full + mp3_buffer_full_size, mp3_buffer, mp3_size);
+        // mp3_buffer_full_size += mp3_size;
     }
 
     // Clean up
@@ -323,7 +325,7 @@ void process_audio()
     {
         free(bands[i]);
     }
-    lame_close(lame_encoder);
+    //lame_close(lame_encoder);
     snd_pcm_close(handle);
     //snd_pcm_close(playback_handle);
     snd_pcm_hw_params_free(params);
