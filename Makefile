@@ -1,9 +1,9 @@
 # Get CROSS_COMPILE value from user
-CROSS_COMPILE ?= 
+CROSS_COMPILE ?=
 
 # Compiler and flags
 CC = $(CROSS_COMPILE)gcc
-CFLAGS += -g -Wall $(shell pkg-config --cflags alsa)
+CFLAGS += -g -Wall
 LDFLAGS += $(shell pkg-config --libs alsa) -lfftw3 -lm -pthread -lasound
 
 # Target binary
