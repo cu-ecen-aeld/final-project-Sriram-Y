@@ -1,27 +1,38 @@
-# Get CROSS_COMPILE value from user
+# Cross-compilation setup
 CROSS_COMPILE ?=
-
-# Compiler and flags
 CC = $(CROSS_COMPILE)gcc
-CFLAGS += -g -Wall
-LDFLAGS += $(shell pkg-config --libs alsa) -lfftw3 -lm -pthread -lasound
+
+# Compiler flags
+CFLAGS = -g -Wall -Wextra -O2
+
+# Linker flags - ensure all required libraries are specified here
+LDFLAGS = $(shell pkg-config --libs alsa) -lm -pthread -lasound
 
 # Target binary
 TARGET = audioeqdriver
 
-# Source files and object files
+# Source files
 SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
 
-# Default
+# Default rule to build the target
 all: $(TARGET)
-# default: $(TARGET)
 
-# Build executable from object files
+# Rule to build the target binary
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+	@echo "Linking $(TARGET)..."
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-# Clean
+# Rule to build object files
+%.o: %.c
+	@echo "Compiling $<..."
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Clean rule to remove build artifacts
 clean:
-	rm -f *.o $(TARGET) *.elf *.map
+	@echo "Cleaning build artifacts..."
+	rm -f $(OBJ) $(TARGET)
+
+# Phony targets
+.PHONY: all clean
 
