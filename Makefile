@@ -13,9 +13,11 @@ TARGET = audioeqdriver
 SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
 
-# Default
-all: $(TARGET)
-default: $(TARGET)
+
+# Print the CFLAGS value
+print_cflags:
+	echo "echoing out CFLAGS: $(CFLAGS)"
+	echo "echoing out LDFLAGS: $(LDFLAGS)"
 
 # Build executable from object files
 $(TARGET): $(OBJ)
@@ -27,4 +29,4 @@ clean:
 
 # Phony targets
 .PHONY: 
-	all clean
+	all clean print_cflags
