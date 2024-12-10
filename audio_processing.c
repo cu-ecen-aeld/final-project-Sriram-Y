@@ -1,35 +1,4 @@
 #include "audio_processing.h"
-#include <signal.h>
-#include <unistd.h>
-
-unsigned char *mp3_buffer_full;
-size_t mp3_buffer_full_size = 0;
-size_t mp3_buffer_capacity = 1024 * 1024;
-
-void apply_gain_to_band(double complex *band, int band_size, double gain)
-{
-    for (int i = 0; i < band_size; i++)
-    {
-        band[i] *= gain;
-    }
-}
-
-// Function to handle SIGINT (Ctrl+C)
-void handle_sigint(int sig)
-{
-    FILE *output_file = fopen("final_output.mp3", "wb");
-    if (!output_file)
-    {
-        fprintf(stderr, "Error: unable to open output MP3 file.\n");
-        exit(1);
-    }
-
-    fwrite(mp3_buffer_full, sizeof(unsigned char), mp3_buffer_full_size, output_file);
-    fclose(output_file);
-
-    free(mp3_buffer_full);
-    exit(0);
-}
 
 // Check if a number is a power of two
 int is_power_of_two(int n)
@@ -143,7 +112,7 @@ void process_audio()
     short *buffer;
     snd_pcm_uframes_t frames;
     int err;
-    unsigned int sample_rate = SAMPLE_RATE;
+    int sample_rate = SAMPLE_RATE;
 
     // Open PCM device for capture
     if ((err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_CAPTURE, 0)) < 0)
@@ -181,15 +150,19 @@ void process_audio()
         bands[i] = (double complex *)malloc(frames * sizeof(double complex));
     }
 
-    //Initialize LAME for final MP3 encoding
+    // Initialize LAME for final MP3 encoding
     lame_t lame_encoder = lame_init();
     lame_set_in_samplerate(lame_encoder, SAMPLE_RATE);
     lame_set_num_channels(lame_encoder, CHANNELS);
     lame_set_brate(lame_encoder, 128);
     lame_init_params(lame_encoder);
 
-    signal(SIGINT, handle_sigint);
-    mp3_buffer_full = (unsigned char *)malloc(mp3_buffer_capacity);
+    FILE *output_file = fopen("final_output.mp3", "wb");
+    if (!output_file)
+    {
+        fprintf(stderr, "Error: unable to open output MP3 file.\n");
+        exit(1);
+    }
 
     unsigned char mp3_buffer[BUFFER_SIZE];
 
@@ -209,7 +182,7 @@ void process_audio()
         }
         else if (err != frames)
         {
-            fprintf(stderr, "Error: short read, read %d frames instead of %ld\n", err, frames);
+            fprintf(stderr, "Error: short read, read %d frames instead of %d\n", err, frames);
             continue;
         }
 
@@ -226,12 +199,6 @@ void process_audio()
         // FFT and band processing
         fft(fft_data, fft_data, fft_size);
         split_into_bands(fft_data, bands, fft_size);
-
-        double gains[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 10.0};
-        for (int j = 0; j < 6; j++)
-        {
-            apply_gain_to_band(bands[j], fft_size, gains[j]);
-        }
 
         // Combine all bands into a single waveform
         for (int i = 0; i < fft_size; i++)
@@ -252,18 +219,15 @@ void process_audio()
             buffer[i] = (short)creal(fft_data[i]);
         }
 
-        //Encode to MP3
+        // Encode to MP3
         int mp3_size = lame_encode_buffer_interleaved(lame_encoder, buffer, frames, mp3_buffer, BUFFER_SIZE);
-
-        if (mp3_buffer_full_size + mp3_size > mp3_buffer_capacity)
-        {
-            mp3_buffer_capacity *= 2;
-            mp3_buffer_full = (unsigned char *)realloc(mp3_buffer_full, mp3_buffer_capacity);
-        }
-
-        memcpy(mp3_buffer_full + mp3_buffer_full_size, mp3_buffer, mp3_size);
-        mp3_buffer_full_size += mp3_size;
+        fwrite(mp3_buffer, sizeof(unsigned char), mp3_size, output_file);
     }
+
+    // Flush and close MP3 file
+    int final_mp3_size = lame_encode_flush(lame_encoder, mp3_buffer, BUFFER_SIZE);
+    fwrite(mp3_buffer, sizeof(unsigned char), final_mp3_size, output_file);
+    fclose(output_file);
 
     // Clean up
     free(buffer);
