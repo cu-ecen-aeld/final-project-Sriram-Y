@@ -146,16 +146,16 @@ void process_audio()
     unsigned int sample_rate = SAMPLE_RATE;
 
     // Open PCM device for capture
-    if ((err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0)
+    if ((err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_CAPTURE, 0)) < 0)
     {
-        fprintf(stderr, "Error: unable to open PCM device playback: %s\n", snd_strerror(err));
+        fprintf(stderr, "Error: unable to open PCM device: %s\n", snd_strerror(err));
         exit(1);
     }
 
     snd_pcm_hw_params_malloc(&params);
     if ((err = snd_pcm_hw_params_any(handle, params)) < 0)
     {
-        fprintf(stderr, "Error: unable to initialize hardware parameters playback: %s\n", snd_strerror(err));
+        fprintf(stderr, "Error: unable to initialize hardware parameters: %s\n", snd_strerror(err));
         exit(1);
     }
 
