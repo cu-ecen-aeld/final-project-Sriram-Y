@@ -1,5 +1,13 @@
 #include "audio_processing.h"
 
+void apply_gain_to_band(double complex *band, int band_size, double gain)
+{
+    for (int i = 0; i < band_size; i++)
+    {
+        band[i] *= gain;
+    }
+}
+
 // Check if a number is a power of two
 int is_power_of_two(int n)
 {
@@ -199,6 +207,12 @@ void process_audio()
         // FFT and band processing
         fft(fft_data, fft_data, fft_size);
         split_into_bands(fft_data, bands, fft_size);
+
+        double gains[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 10.0};
+        for (int j = 0; j < 6; j++)
+        {
+            apply_gain_to_band(bands[j], fft_size, gains[j]);
+        }
 
         // Combine all bands into a single waveform
         for (int i = 0; i < fft_size; i++)
