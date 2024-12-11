@@ -147,6 +147,28 @@ void process_audio()
         exit(1);
     }
 
+    snd_pcm_t *playback_handle;
+    if ((err = snd_pcm_open(&playback_handle, "hw:1,0", SND_PCM_STREAM_PLAYBACK, 0)) < 0)
+    {
+        fprintf(stderr, "Error: unable to open PCM playback device: %s\n", snd_strerror(err));
+        exit(1);
+    }
+
+    // Set the hardware parameters for playback
+    snd_pcm_hw_params_t *playback_params;
+    snd_pcm_hw_params_malloc(&playback_params);
+    if ((err = snd_pcm_hw_params_any(playback_handle, playback_params)) < 0 ||
+        (err = snd_pcm_hw_params_set_access(playback_handle, playback_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0 ||
+        (err = snd_pcm_hw_params_set_format(playback_handle, playback_params, SND_PCM_FORMAT_S16_LE)) < 0 ||
+        (err = snd_pcm_hw_params_set_channels(playback_handle, playback_params, CHANNELS)) < 0 ||
+        (err = snd_pcm_hw_params_set_rate_near(playback_handle, playback_params, &sample_rate, 0)) < 0 ||
+        (err = snd_pcm_hw_params(playback_handle, playback_params)) < 0)
+    {
+        fprintf(stderr, "Error: unable to set playback hardware parameters: %s\n", snd_strerror(err));
+        exit(1);
+    }
+    snd_pcm_hw_params_malloc(&playback_params);
+
     snd_pcm_hw_params_get_period_size(params, &frames, 0);
     buffer = (short *)malloc(frames * sizeof(short) * CHANNELS);
 
@@ -157,22 +179,6 @@ void process_audio()
     {
         bands[i] = (double complex *)malloc(frames * sizeof(double complex));
     }
-
-    // Initialize LAME for final MP3 encoding
-    lame_t lame_encoder = lame_init();
-    lame_set_in_samplerate(lame_encoder, SAMPLE_RATE);
-    lame_set_num_channels(lame_encoder, CHANNELS);
-    lame_set_brate(lame_encoder, 128);
-    lame_init_params(lame_encoder);
-
-    FILE *output_file = fopen("final_output.mp3", "wb");
-    if (!output_file)
-    {
-        fprintf(stderr, "Error: unable to open output MP3 file.\n");
-        exit(1);
-    }
-
-    unsigned char mp3_buffer[BUFFER_SIZE];
 
     while (1)
     {
@@ -208,7 +214,7 @@ void process_audio()
         fft(fft_data, fft_data, fft_size);
         split_into_bands(fft_data, bands, fft_size);
 
-        double gains[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 10.0};
+        double gains[6] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
         for (int j = 0; j < 6; j++)
         {
             apply_gain_to_band(bands[j], fft_size, gains[j]);
@@ -233,15 +239,18 @@ void process_audio()
             buffer[i] = (short)creal(fft_data[i]);
         }
 
-        // Encode to MP3
-        int mp3_size = lame_encode_buffer_interleaved(lame_encoder, buffer, frames, mp3_buffer, BUFFER_SIZE);
-        fwrite(mp3_buffer, sizeof(unsigned char), mp3_size, output_file);
+        err = snd_pcm_writei(playback_handle, buffer, frames);
+        if (err == -EPIPE)
+        {
+            fprintf(stderr, "Error: buffer underrun occurred\n");
+            snd_pcm_prepare(playback_handle);
+        }
+        else if (err < 0)
+        {
+            fprintf(stderr, "Error: failed to write audio data: %s\n", snd_strerror(err));
+            break;
+        }
     }
-
-    // Flush and close MP3 file
-    int final_mp3_size = lame_encode_flush(lame_encoder, mp3_buffer, BUFFER_SIZE);
-    fwrite(mp3_buffer, sizeof(unsigned char), final_mp3_size, output_file);
-    fclose(output_file);
 
     // Clean up
     free(buffer);
@@ -251,6 +260,5 @@ void process_audio()
     {
         free(bands[i]);
     }
-    lame_close(lame_encoder);
     snd_pcm_close(handle);
 }
