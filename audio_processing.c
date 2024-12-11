@@ -205,6 +205,16 @@ void process_audio()
             continue;
         }
 
+        fprintf(stdout, "Captured buffer values:");
+
+        for (int i = 0; i < CHANNELS * frames; i++)
+        {
+            fprintf(stdout, "%d, ", buffer[i]);
+            if ((i+1) % 20 == 0) fprintf(stdout, "\n");
+        }
+
+        fprintf(stdout, "\n");
+
         // Ensure FFT size is a power of two
         int fft_size = frames;
         if (!is_power_of_two(fft_size))

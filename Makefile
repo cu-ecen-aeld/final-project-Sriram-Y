@@ -23,6 +23,7 @@ $(TARGET): $(OBJ)
 # Clean
 clean:
 	rm -f *.o $(TARGET) *.elf *.map
+	# @if [ -f final_output.mp3 ]; then rm final_output.mp3; fi
 
 # Phony targets
 .PHONY: 
