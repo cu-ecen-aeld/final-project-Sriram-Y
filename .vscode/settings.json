@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "audio_processing.h": "c"
+        "audio_processing.h": "c",
+        "asoundlib.h": "c"
     }
 }
