@@ -135,7 +135,7 @@ void process_audio()
     short *buffer;
     snd_pcm_uframes_t frames;
     int err;
-    int sample_rate = SAMPLE_RATE;
+    unsigned int sample_rate = SAMPLE_RATE;
 
     // Open PCM device for capture
     if ((err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_CAPTURE, 0)) < 0)
@@ -201,7 +201,7 @@ void process_audio()
         }
         else if (err != frames)
         {
-            fprintf(stderr, "Error: short read, read %d frames instead of %d\n", err, frames);
+            fprintf(stderr, "Error: short read, read %d frames instead of %ld\n", err, frames);
             continue;
         }
 
