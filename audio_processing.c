@@ -138,7 +138,7 @@ void process_audio()
     unsigned int sample_rate = SAMPLE_RATE;
 
     // Open PCM device for capture
-    if ((err = snd_pcm_open(&handle, "hw:Loopback,1,0", SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK)) < 0)
+    if ((err = snd_pcm_open(&handle, "hw:Loopback,1,0", SND_PCM_STREAM_CAPTURE, 0)) < 0)
     {
         fprintf(stderr, "Error: unable to open PCM device: %s\n", snd_strerror(err));
         exit(1);
