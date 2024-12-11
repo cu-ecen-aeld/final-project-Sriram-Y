@@ -130,7 +130,7 @@ void process_audio(double gains[6], bool willExport)
     snd_pcm_hw_params_t *playback_params;
 
     // Open PCM device for capture
-    if ((err = snd_pcm_open(&capture_handle, "default", SND_PCM_STREAM_CAPTURE, 0)) < 0)
+    if ((err = snd_pcm_open(&capture_handle, "hw:Loopback,1,0", SND_PCM_STREAM_CAPTURE, 0)) < 0)
     {
         fprintf(stderr, "Error: unable to open PCM device: %s\n", snd_strerror(err));
         exit(1);
@@ -223,6 +223,16 @@ void process_audio(double gains[6], bool willExport)
             fprintf(stderr, "Error: short read, read %d frames instead of %ld\n", err, frames);
             continue;
         }
+
+        fprintf(stdout, "Captured buffer values:");
+
+        for (int i = 0; i < CHANNELS * frames; i++)
+        {
+            fprintf(stdout, "%d, ", buffer[i]);
+            if ((i+1) % 20 == 0) fprintf(stdout, "\n");
+        }
+
+        fprintf(stdout, "\n");
 
         // Ensure FFT size is a power of two
         int fft_size = frames;
