@@ -214,7 +214,7 @@ void process_audio()
         fft(fft_data, fft_data, fft_size);
         split_into_bands(fft_data, bands, fft_size);
 
-        double gains[6] = {10.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+        double gains[6] = {20.0, 1.0, 1.0, 1.0, 1.0, 1.0};
         for (int j = 0; j < 6; j++)
         {
             apply_gain_to_band(bands[j], fft_size, gains[j]);

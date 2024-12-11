@@ -3,7 +3,7 @@
 
 int main()
 {
-    printf("Starting audio EQ driver application...\n");
+    printf("Audio EQ Driver is running!!!\n");
     process_audio();
     return 0;
 }
