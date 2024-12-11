@@ -226,9 +226,12 @@ void process_audio(double gains[6], bool willExport)
 
         // Ensure FFT size is a power of two
         int fft_size = frames;
-        if (!is_power_of_two(fft_size))
+        if (willExport)
         {
-            fft_size = next_power_of_two(frames);
+            if (!is_power_of_two(fft_size))
+            {
+                fft_size = next_power_of_two(frames);
+            }
         }
 
         // Prepare the FFT input
